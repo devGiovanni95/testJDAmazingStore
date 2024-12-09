@@ -68,6 +68,9 @@ public class StoreItemService {
     if (existingItem.isPresent()) {
       throw new IllegalArgumentException("Um item com o mesmo nome já existe.");
     }
+    if (!storeItem.getType().equalsIgnoreCase("PRODUCT") || !storeItem.getType().equalsIgnoreCase("SERVICE")){
+      throw new IllegalArgumentException("type is not PRODUCT or SERVICE");
+    }
 
     // Se não existir, cria a linha da tabela e salva o novo item
     StoreItemH2TableRow row = new StoreItemH2TableRow(storeItem.getName(), storeItem.getPrice(), storeItem.getType());
@@ -81,12 +84,30 @@ public class StoreItemService {
 
 
   public StoreItem update(Integer id, StoreItem storeItem) {
+
+    // Retrieve the existing item from the repository
+    StoreItemH2TableRow existingItem = storeItemH2Repository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Item not found"));
+
     // TODO: Implement this method
-    StoreItem item = getItemById(id);
-    item.setName(storeItem.getName());
-    item.setType(storeItem.getType());
-    item.setPrice(storeItem.getPrice());
-    return storeItemH2Repository.save(item);
+    //StoreItem item = getItemById(id);
+    existingItem.setName(storeItem.getName());
+    existingItem.setType(storeItem.getType());
+    existingItem.setPrice(storeItem.getPrice());
+
+    double aux = existingItem.getPrice() / 2;
+
+    if(existingItem.getPrice() < aux ){
+      throw new IllegalArgumentException("The price dont can be  less than half the current price when updating");
+    }
+
+    StoreItemH2TableRow updatedItem = storeItemH2Repository.save(existingItem);
+
+    return new StoreItem(
+            updatedItem.getName(),
+            updatedItem.getPrice(),
+            updatedItem.getType()
+    );
   }
 
   public void delete(Integer id) throws Exception {
