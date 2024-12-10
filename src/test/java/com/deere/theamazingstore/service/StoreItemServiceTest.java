@@ -111,7 +111,7 @@ class StoreItemServiceTest {
 
     // Then
     String input = "vicE";
-    List<StoreItem> actualList = storeItemService.getList();
+    List<StoreItem> actualList = storeItemService.getListFilter(input);
 
     // Assert filtered list
     List<StoreItem> expectedList = List.of(
@@ -136,7 +136,7 @@ class StoreItemServiceTest {
     given(storeItemH2Repository.findAll()).willReturn(rowsFromDatabase);
 
     // Then
-    List<StoreItem> actualList = storeItemService.getList();
+    List<StoreItem> actualList = storeItemService.getListSorted();
 
     // Assert sorted list
     List<StoreItem> expectedList = List.of(
@@ -166,7 +166,7 @@ class StoreItemServiceTest {
     Double priceAverage = storeItemService.getOverallPriceAverage();
 
     // Assert expected price average
-    assertEquals("27.07", String.format("%.2f", priceAverage));
+    assertEquals("27,07", String.format("%.2f", priceAverage));
 
     // Assert findAll is called
     verify(storeItemH2Repository).findAll();

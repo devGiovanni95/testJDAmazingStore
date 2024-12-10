@@ -4,10 +4,7 @@ import com.deere.theamazingstore.data.model.StoreItemH2TableRow;
 import com.deere.theamazingstore.data.repository.StoreItemH2Repository;
 import com.deere.theamazingstore.model.StoreItem;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,12 +27,45 @@ public class StoreItemService {
   private StoreItem convertToModel(StoreItemH2TableRow row) {
     return new StoreItem(row.getName(), row.getPrice(), row.getType());
   }
-  public List<StoreItem> getList() {
-    return storeItemH2Repository.findAll().stream().map(this::convertToModel).collect(Collectors.toList());
+  public List<StoreItem> getListSorted() {
+    return storeItemH2Repository.findAll().stream()
+            .map(this::convertToModel)
+            .sorted(Comparator.comparing(StoreItem::getPrice).reversed())
+            .collect(Collectors.toList());
+  }
+
+    public List<StoreItem> getList() {
+        return storeItemH2Repository.findAll().stream()
+                .map(this::convertToModel)
+                .collect(Collectors.toList());
+    }
+
+    public List<StoreItem> getListFilter(String type) {
+        return storeItemH2Repository.findAll().stream()
+                .filter(item -> { return  item.getType().toLowerCase().contains(type.toLowerCase());})
+                .map(this::convertToModel)
+                .collect(Collectors.toList());
+    }
+
+  //rever
+  private  StoreItem getItemById(Integer id){
+    StoreItemH2TableRow existingItem = storeItemH2Repository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Item not found"));
+
+     StoreItem item = new StoreItem(
+             existingItem.getName(),
+             existingItem.getPrice(),
+             existingItem.getType()
+    );
+    return null;
   }
 
   public Double getOverallPriceAverage() {
-    throw new RuntimeException("Not implemented");
+      return storeItemH2Repository.findAll().stream()
+              .map(this::convertToModel) // Convert the data to the model
+              .mapToDouble(StoreItem::getPrice) // Map each item to its price
+              .average() // Calculate the average of the prices
+              .orElse(0.0); // If the list is empty, return 0.0 as the default value
   }
 /*
   public StoreItem create(StoreItem storeItem) {
@@ -68,20 +98,21 @@ public class StoreItemService {
     if (existingItem.isPresent()) {
       throw new IllegalArgumentException("Um item com o mesmo nome já existe.");
     }
-    if (!storeItem.getType().equalsIgnoreCase("PRODUCT") || !storeItem.getType().equalsIgnoreCase("SERVICE")){
+    if (storeItem.getType().equals("PRODUCT") || storeItem.getType().equals("SERVICE")){
+        // Se não existir, cria a linha da tabela e salva o novo item
+        StoreItemH2TableRow row = new StoreItemH2TableRow(storeItem.getName(), storeItem.getPrice(), storeItem.getType());
+        StoreItemH2TableRow savedRow = storeItemH2Repository.save(row);
+
+        // Converte o StoreItemH2TableRow de volta para StoreItem
+        return new StoreItem(savedRow.getName(), savedRow.getPrice(), savedRow.getType());
+
+    }else {
       throw new IllegalArgumentException("type is not PRODUCT or SERVICE");
+
     }
 
-    // Se não existir, cria a linha da tabela e salva o novo item
-    StoreItemH2TableRow row = new StoreItemH2TableRow(storeItem.getName(), storeItem.getPrice(), storeItem.getType());
-    StoreItemH2TableRow savedRow = storeItemH2Repository.save(row);
-
-    // Converte o StoreItemH2TableRow de volta para StoreItem
-    return storeItemH2Repository.save(new StoreItem(savedRow.getName(), savedRow.getPrice(), savedRow.getType()));
 
   }
-
-
 
   public StoreItem update(Integer id, StoreItem storeItem) {
 
@@ -90,18 +121,23 @@ public class StoreItemService {
             .orElseThrow(() -> new IllegalArgumentException("Item not found"));
 
     // TODO: Implement this method
-    //StoreItem item = getItemById(id);
+    double aux = existingItem.getPrice() / 2;
+
+    if(storeItem.getPrice() <= aux ){
+      throw new IllegalArgumentException("The new price is half the current price when updating");
+    }
+
+    if((existingItem.getPrice() * 2) <= storeItem.getPrice()  ){
+        throw new IllegalArgumentException("The new price is double of the current price when updating or greater than the double of the current price when updating");
+    }
+
+  //StoreItem item = getItemById(id);
     existingItem.setName(storeItem.getName());
     existingItem.setType(storeItem.getType());
     existingItem.setPrice(storeItem.getPrice());
 
-    double aux = existingItem.getPrice() / 2;
 
-    if(existingItem.getPrice() < aux ){
-      throw new IllegalArgumentException("The price dont can be  less than half the current price when updating");
-    }
-
-    StoreItemH2TableRow updatedItem = storeItemH2Repository.save(existingItem);
+      StoreItemH2TableRow updatedItem = storeItemH2Repository.save(existingItem);
 
     return new StoreItem(
             updatedItem.getName(),
@@ -123,7 +159,7 @@ public class StoreItemService {
       storeItemH2Repository.deleteById(id);
     } else {
       // Caso o item não exista, você pode optar por lançar uma exceção ou apenas retornar
-      throw new RuntimeException("Elemento não encontrado para o ID: " + id);
+      throw new IllegalArgumentException("Elemento não encontrado para o ID: " + id);
     }
   }
 
@@ -138,7 +174,7 @@ public class StoreItemService {
   }
 
   public StoreItem getItemById(int i) {
-    return storeItemH2Repository.findById(i).map(this::convertToModel).orElseThrow(() -> new RuntimeException("Item não encontrado com ID: " + i));
+  return storeItemH2Repository.findById(i).map(this::convertToModel).orElse(null);
   }
 /*
   public Optional<StoreItem> getItemById(Integer id) {
